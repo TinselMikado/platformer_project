@@ -5,7 +5,6 @@ import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferStrategy;
-import java.io.FileNotFoundException;
 
 import audio.AudioHandler;
 import input.KbInput;
@@ -128,6 +127,8 @@ public class Game extends Canvas implements Runnable{
 			if(!player.getGhost().isDeployed())
 				player.deployGhost();
 			break;
+		case 82:
+			player.resetGhost();
 		}
 	}
 	
@@ -158,7 +159,10 @@ public class Game extends Canvas implements Runnable{
 	public void printPlayerInfo() {
 		System.out.println(player.getX());
 		System.out.println(player.getY());
+		System.out.println(player.getGhost().getX());
+		System.out.println(player.getGhost().getY());
 		System.out.println(player.allowJump);
+
 	}
 	
 	

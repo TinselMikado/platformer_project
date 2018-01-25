@@ -1,6 +1,5 @@
 package audio;
 
-import java.io.FileNotFoundException;
 import java.util.HashMap;
 
 public class AudioHandler {
