@@ -3,9 +3,12 @@ package main;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.util.HashMap;
 import java.util.Random;
 
 import audio.AudioHandler;
+import blockdata.InteractiveTile;
+import blockdata.LevelManager;
 import blockdata.Tile;
 import ghost.GhostInfo;
 import ghost.GhostPlayer;
@@ -14,7 +17,7 @@ public class Player {
 	
 	private int x, y;
 	private float attemptedxV, attemptedyV, xV, yV;
-	private int action = 0; // 0 = idle, 1 = running, 2 = jumping, 3 = falling, 4 = slowfall
+	public int action = 0; // 0 = idle, 1 = running, 2 = jumping, 3 = falling, 4 = slowfall
 	private int faceDirection = 1; //-1 left, 1 right
 	private int[] keyDir; //stores whether keys are held down, position 0 is VK_LEFT, 1:VK_UP, 2:VK_RIGHT, 3:VK_DOWN, 1 means true, 0 means false
 	private boolean falling = false;
@@ -22,36 +25,31 @@ public class Player {
 	public int allowJump = 1;
 	private int allowDJump = 0;
 	private Tile[] level;
-	private Tile tAbove, tBelow, tAbove2, tBelow2, gtAbove, gtBelow, gtAbove2, gtBelow2;
+	private HashMap<InteractiveTile, Byte> inTileMap;
+	public Tile tAbove, tBelow, tAbove2, tBelow2;
 	private int headTile = 8;
 	private int prevAct = 0;
 	private AudioHandler audioHandler;
 	private Random r;
 	private GhostPlayer ghost;
-	private int currGhostFrame = 0;
 	private int jumpType = 0;
-	private GhostInfo tempGInfo;
-	private boolean ghostFinished = false;
-	private int ghostSpriteTile = 0;
+	private LevelManager levelManager;
 	
-	public Player(int x, int y, SpriteSheet ss, Tile[] level, AudioHandler ah) {
+	public Player(int x, int y, SpriteSheet ss, LevelManager levelManager, AudioHandler ah) {
 		
 		this.x = x; this.y = y;
 		keyDir = new int[4];
 		this.ss=ss;
-		this.level = level;
+		level = levelManager.getArray();
+		inTileMap = levelManager.getInTileMap();
 		audioHandler = ah;
 		r  = new Random();
-		ghost = new GhostPlayer(x, y);
-		
+		ghost = new GhostPlayer(x, y, levelManager, audioHandler, ss);
+		this.levelManager = levelManager;
 		tAbove = level[0];
 		tBelow = level[0];
 		tAbove2 = level[0];
 		tBelow2 = level[0];
-		gtAbove = level[0];
-		gtBelow = level[0];
-		gtAbove2 = level[0];
-		gtBelow2 = level[0];
 		
 	}
 	
@@ -69,21 +67,78 @@ public class Player {
 		if(djumpTimer<30)
 			djumpTimer++;			
 		
-		tAbove = level[xyCoordToTileSet(x+2, (int)(y + yV))];
-		tBelow = level[xyCoordToTileSet(x+2, (int)(y + yV + 64))];
-		tAbove2 = level[xyCoordToTileSet(x+30, (int)(y + yV))];
-		tBelow2 = level[xyCoordToTileSet(x+30, (int)(y + yV + 64))];
-			
-		if(ghost.isDeployed()&&(!ghostFinished || (ghost.getYVel(currGhostFrame)!=0||ghost.getXVel(currGhostFrame)!=0))) {
-			gtAbove = level[xyCoordToTileSet(ghost.getX()+2, (int)(ghost.getY() + ghost.getYVel(currGhostFrame)))];
-			gtBelow = level[xyCoordToTileSet(ghost.getX()+2, (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 64))];
-			gtAbove2 = level[xyCoordToTileSet(ghost.getX()+30, (int)(ghost.getY() + ghost.getYVel(currGhostFrame)))];
-			gtBelow2 = level[xyCoordToTileSet(ghost.getX()+30, (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 64))];
-		}
-		
+		/*
+		 * 
+		 * 			VERTICAL BOUNDARY BOX SETTINGS
+		 * 
+		 */
 				
+		tAbove  = level[xyCoordToTileSet(x, (int)(y + yV - 1))];
+		tBelow  = level[xyCoordToTileSet(x, (int)(y + yV + 64))];
+		tAbove2 = level[xyCoordToTileSet(x + 31, (int)(y + yV - 1))];
+		tBelow2 = level[xyCoordToTileSet(x + 31, (int)(y + yV + 64))];
+				
+		/*		
+		*	
+		*				X MOVEMENT CALCS
+		*
+		*/
+		
+		
 		attemptedxV = keyDir[0]*-3 + keyDir[2]*3; //attemps moving accoring to key input
 		xV = checkXBounds(getSign(attemptedxV))*attemptedxV; //sets xvelocity to the dir of keys held down, if opposite directions both held down, vel = 0
+		x+=xV; //move player on x by xV
+		
+			
+		/*
+		 * 
+		 * 				FALLING, YMOVEMENT CALC, GRAVITY APPLIC., & JUMPING
+		 * 		
+		 */
+	
+		
+		falling = i2b(checkYBounds(getSign(yV))); 	//checks whether character on the ground or not, sets falling to true/false
+		
+		if(allowDJump==0)						//DJump is set to zero when on the ground,
+			allowDJump = 1 - keyDir[1]; 		// releasing the jump key while in the air will set it to 1, using the double jump sets allowDJump to -1 until player hits ground again
+		
+		
+		if(falling) {
+			
+			allowJump = 0; 							//dont allow the player to (normal) jump while in the air
+			
+			if(yV<8)
+				yV+=0.3*checkYBounds(1);					//apply gravity to a max of 8
+			else yV=8;
+			
+			if(!tAbove.isSolid()&&!tAbove2.isSolid()&&djumpTimer==30&&allowDJump==1&&keyDir[1]==1) {			
+				dJump();
+			}
+			
+			yV += attemptedyV*checkYBounds(getSign(attemptedyV));
+		}
+		else{
+			yV=0;							//resets any left over gravity from last tick
+			if(allowJump==0)
+					allowJump = 1 - keyDir[1];
+			allowDJump = 0;
+			if(!tAbove.isSolid()&&!tAbove2.isSolid()&&allowJump==1&&keyDir[1]==1) { // if both blocks above are nonsolid, and player pressing jump, and char is allowed to jump, then jump
+				jump();
+			}
+			yV = attemptedyV * checkYBounds(getSign(attemptedyV)); //apply Y velocity
+			
+		}
+		
+		y+=yV; //apply Y movement
+		attemptedyV=0; //reset attempted movement
+		
+		/*			
+		 *  
+		 * 				DIRECTION AND ACTION SETTING FOR ANIMATIONS
+		 * 
+		 */
+		
+		
 		
 		if(keyDir[0]==1&&keyDir[2]==0)
 			faceDirection = -1;
@@ -91,98 +146,57 @@ public class Player {
 			faceDirection = 1;
 		
 		if(!falling&&attemptedxV==0)
-			action = 0;
+			action = 0;					//idle
 		
 		if(!falling&&attemptedxV!=0)
-			action = 1;
-			
-		
-		
-		x+=xV; //move player on x by xV
-				
-		
-		falling = i2b(checkYBounds(getSign(yV))); //checks whether character on the ground or not, sets falling to true/false
+			action = 1;					//walking
 		
 		if(falling) {
 			if(yV<0)
-				action = 2; //set action to 'jump' action
+				action = 2;				//jumping
 			else if(yV>6)
-				action = 3; //set action to 'fall' action
+				action = 3;				//falling
 			else
-				action = 4; //set action to slow fall
-			allowJump = 0;
-			if(yV<8)
-				attemptedyV+=0.3;	//apply gravity
-			if(allowDJump==0)
-				allowDJump = 1 - keyDir[1];
+				action = 4;				//slow falling
 		}
-		else{
-			attemptedyV=0;
-			if(allowJump==0)
-				allowJump = 1 - keyDir[1]; //only allows player to jump if they are on the ground and have since released the jump button (no holding and perma jumping)
-			allowDJump = 0;
-			
-		}
-		if(!tAbove.isSolid()&&!tAbove2.isSolid()&&allowJump==1&&keyDir[1]==1) { // if both blocks above are nonsolid, and player pressing jump, and char is allowed to jump, then jump
-			jump();
-		}
-		else if(!tAbove.isSolid()&&!tAbove2.isSolid()&&djumpTimer==30&&allowDJump==1&&keyDir[1]==1) {
-			
-			dJump();
-		}
-		
-		yV = attemptedyV * checkYBounds(getSign(attemptedyV));
-		y+=yV;
 		
 		if(prevAct!=action)
-			actionTimer = 0; //reset the frame position if playing a different animation (changing action)
+			actionTimer = 0; 	//reset the frame position if playing a different animation (changing action)
+		prevAct = action;		//set prevaction to allow above method to work
 		
 		headTile = chooseTileFrame(action, actionTimer); //choose the tile depending on what char is doing
-		prevAct = action;
+		
 		if(actionTimer>600&&action==0)
 			action = 0; //change this value later, but idea is if character is idle 10seconds+ then do some 'waiting' animation
 		
+		
+		
+		/*
+		 * 
+		 * 
+		 *					GHOST INFORMATION SETTING & PLAYBACK 
+		 * 
+		 * 
+		 */
+		
 			
 		
-		if(!ghost.isDeployed()) {
-				ghost.getInfoList().add(new GhostInfo(action, faceDirection, actionTimer, jumpType, attemptedxV, attemptedyV));
+		if(!ghost.isDeployed()) {																		//if ghost is not "out"
+			ghost.getInfoList().add(new GhostInfo(faceDirection, jumpType, attemptedxV, attemptedyV)); //store information about character to the ghost info array
 		}
 		else {
-
-			tempGInfo = ghost.getInfoList().get(currGhostFrame);
-			
-			ghost.setX((int)(ghost.getX()+tempGInfo.getXVel()*checkGhostXBounds(getSign(tempGInfo.getXVel()))));
-			if(ghost.getYVel(currGhostFrame)>=0&&(gtBelow.isSolid()||gtBelow2.isSolid())&&(ghost.getY()+64<gtBelow.getY()))
-				ghost.setY(level[xyCoordToTileSet(0, (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 64))].getY() - 64);
-			else
-				ghost.setY((int)(ghost.getY()+tempGInfo.getYVel()*checkGhostYBounds()));
-			
-			checkGhostYBounds();
-			
-			if(tempGInfo.getJumpType()==1)
-				audioHandler.playSFX("jump");
-			if(tempGInfo.getJumpType()==2)
-				audioHandler.playSFX("dJump");
-			
-			
-			if(currGhostFrame == ghost.getInfoList().size()-1) {
-				ghostFinished = true;
-				ghostSpriteTile = 32 + tickTimer/60;
-			}
-			else {
-				ghostSpriteTile = 32 + chooseTileFrame(tempGInfo.getAction(), tempGInfo.getActionTimer());
-			}	
-			
-			if(!ghostFinished)
-				currGhostFrame++;
+			ghost.tick();
 		}
-		
-		jumpType = 0;
+		for(InteractiveTile _it: inTileMap.keySet()) {
+			_it.tick();
+		}
+		jumpType = 0; //reset jump type
 		
 	}
 	
 	public void jump() {
-		attemptedyV = -9; //jump
+		yV=0;
+		attemptedyV = -9;
 		audioHandler.playSFX("jump");
 		allowJump=0;
 		djumpTimer = 0;
@@ -190,7 +204,8 @@ public class Player {
 	}
 	
 	public void dJump() {
-		attemptedyV = -7; //jump
+		yV=0;
+		attemptedyV = -7;
 		allowDJump = -1;
 		audioHandler.playSFX("dJump");
 		jumpType = 2;
@@ -198,7 +213,7 @@ public class Player {
 	
 	public void deployGhost() {
 		ghost.setDeployed(true);
-		currGhostFrame = 0;
+		ghost.setCurrGhostFrame(0);
 	}
 	
 	public GhostPlayer getGhost() {
@@ -206,15 +221,16 @@ public class Player {
 	}
 	
 	public void resetGhost() {
-		ghostFinished=false;
+		ghost.setFinished(false);
 		ghost.setDeployed(false);
-		currGhostFrame = 0;
-		ghost = new GhostPlayer(x, y);
+		ghost.setCurrGhostFrame(0); //not sure if this is needed but just in case
+		ghost = new GhostPlayer(x, y, levelManager, audioHandler, ss);
 	}
 	
 	
 	public int chooseTileFrame(int act, int time) { //returns tile of head, body is just +8 (added in render function)
-				
+		
+		//System.out.println(((InteractiveTile)level[946]).getTimer());
 		switch (act){
 			case 0: //idle
 				return 0 + (time/60)%2;
@@ -222,8 +238,7 @@ public class Player {
 			case 1: //walking
 				if((time-12)%36==0) { //if character is on step specific frame						
 					audioHandler.playSFXR("steps", r.nextInt(4));
-				}
-						
+				}					
 					
 				return 2 + (time/12)%6; //example: 10 is base tile (frame 0), time / {12} because tile changes every {12} ticks, %<6> because there are <6> total tiles
 			case 2: //jumping
@@ -242,39 +257,82 @@ public class Player {
 	
 		
 	public int checkXBounds(int dir){
-		if(dir==-1) { //check left side
-			if (level[xyCoordToTileSet((int)(x+xV-4), (int)(y + yV + 0 ))].isSolid() ||  //checks all 3 possible tiles covering left side for solid tiles
-				level[xyCoordToTileSet((int)(x+xV-4), (int)(y + yV + 32))].isSolid() ||
-				level[xyCoordToTileSet((int)(x+xV-4), (int)(y + yV + 60))].isSolid())	
-				return 0; // if a solid block is found, disallow the movement
-		}
-		else if(dir==1){ //check right side
-			if (level[xyCoordToTileSet((int)(x+xV+36), (int)(y + yV + 0 ))].isSolid() ||
-				level[xyCoordToTileSet((int)(x+xV+36), (int)(y + yV + 32))].isSolid()|| //checks all 3 possible tiles covering right side for solid tiles
-				level[xyCoordToTileSet((int)(x+xV+36), (int)(y + yV + 60))].isSolid()) {
-				return 0; // if a solid block is found, disallow the movement
-			}
+		
+		Tile tUP =   level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 0 ))]; //checks top corner, middle and bottom of player
+		Tile tMID =  level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 32))]; //in given x direction
+		Tile tDOWN = level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 63))];
+		
+		if (tUP.isSolid()||tMID.isSolid()||tDOWN.isSolid())	{ //if any 3 tilespaces are solid
+			if(y+63<tDOWN.getY()+2*tDOWN.getHeight()) // if player is above the height of the bottom block, then walk
+				return 1;
+			return 0; // else, disallow the movement
 		}
 		
-		return 1; //no solid blocks found, allow the movement
+		return 1; //if none are solid, allow movement
 	}
 	
-	public int checkGhostXBounds(int dir){
-		if(dir==-1) { //check left side
-			if (level[xyCoordToTileSet((int)(ghost.getX()+ghost.getXVel(currGhostFrame)-4), (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 0 ))].isSolid() ||  //checks all 3 possible tiles covering left side for solid tiles
-				level[xyCoordToTileSet((int)(ghost.getX()+ghost.getXVel(currGhostFrame)-4), (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 32))].isSolid() ||
-				level[xyCoordToTileSet((int)(ghost.getX()+ghost.getXVel(currGhostFrame)-4), (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 60))].isSolid())
-				return 0; // if a solid block is found, disallow the movement
+	
+	public int checkYBounds(int dir) {
+		
+		if(dir>=0) { //IF CHAR IS FALLING DOWNWARDS OR STILL
+			
+						
+			Class<? extends Tile> tBelowType = tBelow.getClass();
+			Class<? extends Tile> tBelow2Type = tBelow2.getClass();
+			
+			if((tBelow.isSolid()||tBelow2.isSolid())) { //AND EITHER BLOCK UNDERNEATH IS SOLID	
+				
+				byte solid = (byte)(b2i(tBelow.isSolid()) + 2*b2i(tBelow2.isSolid())); //solid = 1 if tbelow solid, 2 if tbelow 2 solid, 3 if both
+						
+				switch(solid) {
+				case 1:
+					if(tBelowType==InteractiveTile.class) {
+						activateIntTile((InteractiveTile)tBelow);  //checks for buttons and switches, activates them YAWN,
+					}
+					if(y+64<tBelow.getY()+tBelow.getHeight()*2) {						
+						y = tBelow.getY()+tBelow.getHeight()*2 - 64;
+						
+					}
+					break;
+				case 2:
+					if(tBelow2Type==InteractiveTile.class)
+						activateIntTile((InteractiveTile)tBelow2); //all this garbage also allows for varying 'heights' of blocks
+					if(y+64<tBelow2.getY()+tBelow2.getHeight()*2) {						
+						y = tBelow2.getY()+tBelow2.getHeight()*2 - 64;
+						
+					}
+					break;
+				case 3:
+					boolean tBelowBigger = tBelow.getHeight()<=tBelow2.getHeight();
+					Tile tt = tBelowBigger ? tBelow:tBelow2;
+					if(tt.getClass()==InteractiveTile.class)
+						activateIntTile((InteractiveTile)tBelow);
+					if(y+64<tt.getY()+tt.getHeight()*2) {						
+						y = tt.getY()+tt.getHeight()*2 - 64;
+						
+					}
+				}					
+					return 0;
+			}
+			else
+				return 1; //ELSE KEEP FALLING
 		}
-		else if(dir==1){ //check right side
-			if (level[xyCoordToTileSet((int)(ghost.getX()+ghost.getXVel(currGhostFrame)+36), (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 0 ))].isSolid() ||
-				level[xyCoordToTileSet((int)(ghost.getX()+ghost.getXVel(currGhostFrame)+36), (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 32))].isSolid()|| //checks all 3 possible tiles covering right side for solid tiles
-				level[xyCoordToTileSet((int)(ghost.getX()+ghost.getXVel(currGhostFrame)+36), (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 60))].isSolid()) {
-				return 0; // if a solid block is found, disallow the movement
+		else { //ELSE (AS IN IF HE IS JUMPING OR RISING UP ELSEHOW) OR STILL
+			//falling = true; //KEEP "FALLING" (falling variables just means its applying gravity)
+			if(tAbove.isSolid()||tAbove2.isSolid()) { //IF HE HITS CEILING
+				y = tAbove.getY()+32;
+				return 0;
 			}
 		}
-		
-		return 1; //no solid blocks found, allow the movement
+		return 1;
+	}
+	
+	public void activateIntTile(InteractiveTile it) {		
+		it.setState(true);
+		for(InteractiveTile _it : inTileMap.keySet()) {
+			if(_it.getTrID()==it.getTrID())
+				_it.setState(!_it.getState());
+		}
 	}
 	
 	public boolean inBounds(int a, int b1, int b2) {
@@ -301,90 +359,32 @@ public class Player {
 		return true;
 	}
 	
-	public int checkYBounds(int dir) {
-				
-		if(dir>=0) { //IF CHAR IS FALLING DOWNWARDS OR STILL
-			if((tBelow.isSolid()||tBelow2.isSolid())) { //AND EITHER BLOCK UNDERNEATH IS SOLID				
-				if(y+64<tBelow.getY()) {
-					attemptedyV = level[xyCoordToTileSet(0, (int)(y + yV + 64))].getY() - 64 - y;
-					return 1; //snap to floor
-				} else
-					return 0;
-			}
-			else
-				return 1; //ELSE KEEP FALLING
-		}
-		else { //ELSE (AS IN IF HE IS JUMPING OR RISING UP ELSEHOW) OR STILL
-			//falling = true; //KEEP "FALLING" (falling variables just means its applying gravity)
-			if(tAbove.isSolid()||tAbove2.isSolid()) { //IF HE HITS CEILING
-				attemptedyV = 0;
-				return 1;
-			}
-		}
-		return 1;
-	}
 	
-	public int checkGhostYBounds() {
-		
-		if(ghost.getYVel(currGhostFrame)>=0) { //IF GHOST IS FALLING DOWNWARDS OR STILL
-			if((gtBelow.isSolid()||gtBelow2.isSolid())) { //AND EITHER BLOCK UNDERNEATH IS SOLID	
-				if(ghost.getY()+64<gtBelow.getY())
-					ghost.setY(level[xyCoordToTileSet(0, (int)(ghost.getY() + ghost.getYVel(currGhostFrame) + 64))].getY() - 64);
-				
-				return 0;
-			}
-			else
-				return 1; //ELSE KEEP FALLING
-		}
-		else { //ELSE (AS IN IF HE IS JUMPING OR RISING UP ELSEHOW) OR STILL
-			//falling = true; //KEEP "FALLING" (falling variables just means its applying gravity)
-			if(gtAbove.isSolid()||gtAbove2.isSolid()) { //IF HE HITS CEILING
-				return 0;
-			}
-		}
-		return 1;
-	}
+	
 	
 	public void render(Graphics g) {		
-		
-		
-		
+				
 		g.drawImage(ss.getSprite(headTile), x + (1-faceDirection)*16, y, faceDirection*32, 32, null);	// draw player head
 		g.drawImage(ss.getSprite(headTile+8), x + (1-faceDirection)*16, y+32, faceDirection*32, 32, null); //draw player body
 		
-		if(tempGInfo!=null) {
+		if(ghost.getInfoList()!=null) {
 
 			if(ghost.isDeployed()) { //if ghost is out,=
-				Tuple gLoc = new Tuple(ghost.getX(), ghost.getY());
-				
-
-				if(ghostFinished) {
-					int t =(int) ((System.currentTimeMillis() / 500) % 2);
-
-					g.drawImage(ss.getSprite(32 + t), gLoc.x + (1-tempGInfo.getDirection())*16, gLoc.y, tempGInfo.getDirection()*32, 32, null); //if ghost at end of path, do idle animation
-					g.drawImage(ss.getSprite(40 + t), gLoc.x + (1-tempGInfo.getDirection())*16, gLoc.y+32, tempGInfo.getDirection()*32, 32, null); //if ghost at end of path, do idle animation
-
-				}
-				else {
-					g.drawImage(ss.getSprite(ghostSpriteTile), gLoc.x + (1-tempGInfo.getDirection())*16, gLoc.y, tempGInfo.getDirection()*32, 32, null); //else copy whatplayer did
-					g.drawImage(ss.getSprite(ghostSpriteTile+8), gLoc.x + (1-tempGInfo.getDirection())*16, gLoc.y+32, tempGInfo.getDirection()*32, 32, null);
-				}
+				ghost.render(g);				
 			}
 		}
 		
 		Graphics2D g2d = (Graphics2D) g;
 		
 		g2d.setColor(Color.red);
-		g2d.draw(gtBelow.getR());
-		g2d.draw(gtBelow2.getR());
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV-1), (int)(y + yV))].getR());								^
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV-1), (int)(y + yV + 32))].getR());							|
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV-1), (int)(y + yV + 63))].getR());							|
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV+33), (int)(y + yV))].getR());								|
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV+33), (int)(y + yV + 32))].getR());							|
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV+33), (int)(y + yV + 63))].getR());			COLLISION  BOUNDS TESTING
-		//g2d.draw(tAbove.getR());														//						|
-		//g2d.draw(tAbove2.getR());														//						|
+		g2d.draw(tBelow.getR());			
+		g2d.draw(tBelow2.getR());														//						|
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV), (int)(y + yV + 64))].getR());			//				|
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV+30), (int)(y + yV + 64))].getR());		//					|
 		//g2d.drawLine(x, y+48, x+32, y+48);																	|
@@ -400,6 +400,10 @@ public class Player {
 			return -1;
 		
 		return 0;
+	}
+	
+	public int b2i(boolean b) {
+		return b?1:0;
 	}
 	
 	public boolean i2b(int a) {

@@ -2,13 +2,11 @@ package ghost;
 
 
 public class GhostInfo {
-	private int action, faceDirection, actionTimer, jumpType;
+	private int faceDirection, jumpType;
 	private float xVel, yVel;
 	
-	public GhostInfo(int a, int fd, int at, int jT, float xx, float yy){
-		action = a;
+	public GhostInfo(int fd, int jT, float xx, float yy){
 		faceDirection = fd;
-		actionTimer = at;
 		jumpType = jT;
 		xVel = xx;
 		yVel = yy;
@@ -23,14 +21,6 @@ public class GhostInfo {
 	
 	public float getYVel() {
 		return yVel;
-	}
-	
-	
-	public int getAction() {
-		return action;
-	}
-	public int getActionTimer() {
-		return actionTimer;
 	}
 	public int getDirection() {
 		return faceDirection;

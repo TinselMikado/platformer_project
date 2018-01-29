@@ -8,19 +8,28 @@ public class Tile {
 	protected int tileID;
 	protected boolean solid;
 	protected Rectangle r;
+	protected String name;
+	protected char inputChar;
+	protected int height;
 	
-	private static final boolean[] tileMap = {false, true, true, true, true, true, true, true, true, true}; //air, dirt, player1,2,3, grass, portal?
 	
 	public Tile(int x, int y, int tileID) {
 		this.x=x;
 		this.y=y;
 		this.tileID = tileID;
-		solid = tileMap[this.tileID];
-		r= new Rectangle(x, y, 32, 32);
+		height = TileInfo.tileMap[tileID].height;		//physical height of block (reversed) height = 0 is full block, height = 4 is 28 pixels high block, height = 16 half block
+		solid = TileInfo.tileMap[tileID].solid;
+		inputChar = TileInfo.tileMap[tileID].inputChar;
+		name = TileInfo.tileMap[tileID].tileName;
+		r = new Rectangle(x, y, 32, 32);
 	}
 	
 	public boolean isSolid() {
 		return solid;
+	}
+	
+	public int getHeight() {
+		return height;
 	}
 	
 	public int getID() {
@@ -33,6 +42,7 @@ public class Tile {
 	public int getY() {
 		return y;
 	}
+	
 	
 	public Rectangle getR() {
 		return r;

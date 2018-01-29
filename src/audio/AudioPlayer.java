@@ -8,6 +8,7 @@ public class AudioPlayer {
 
 	private Clip clip;
 	public FloatControl volume;
+	public int loopStart = 0;
 	
 	public AudioPlayer(String path){
 		
@@ -22,7 +23,6 @@ public class AudioPlayer {
 					baseFormat.getChannels()*2, 
 					baseFormat.getSampleRate(), 
 					false);
-			System.out.println(baseFormat.getSampleRate() + path);
 			AudioInputStream dais = AudioSystem.getAudioInputStream(decodeFormat, ais);
 			clip = AudioSystem.getClip();
 			clip.open(dais);
@@ -38,9 +38,15 @@ public class AudioPlayer {
 		stop();
 		clip.setFramePosition(0);
 		clip.setLoopPoints(0, -1);
+		clip.loop(Clip.LOOP_CONTINUOUSLY);		
+	}
+	
+	public void loopMusic(int start, int end) {
+		if(clip == null) return;
+		stop();
+		clip.setFramePosition(0);
+		clip.setLoopPoints(start, end);
 		clip.loop(Clip.LOOP_CONTINUOUSLY);
-		
-		
 	}
 	
 	public void playSFX() {

@@ -1,12 +1,17 @@
 package main;
 import java.awt.Canvas;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferStrategy;
+import java.io.File;
 
 import audio.AudioHandler;
+import blockdata.LevelCreate;
+import blockdata.LevelLoader;
+import blockdata.LevelManager;
 import input.KbInput;
 import input.MouseInput;
 
@@ -19,26 +24,34 @@ public class Game extends Canvas implements Runnable{
 	public static final int FHEIGHT = 480;
 	public static final String TITLE = "Game";
 	public static final int SCALE = 2;
-	Player player;
+	public static final int PIXEL_AMOUNT = FWIDTH * FHEIGHT * SCALE * SCALE;
+	public static final Dimension gd = new Dimension(FWIDTH*SCALE, FHEIGHT*SCALE);
+	public Player player;
 	public LevelLoader lvlL;
 	public LevelCreate lvlC;
+	public LevelManager lm;
 	public SpriteSheet textures;
 	public SpriteSheet characterSprites;
 	public AudioHandler audioHandler;
+	public BackgroundRendering bgR;
 	
 	
 	public Game() {
-		
+		File[] folder = new File("src/resources").listFiles();
+		for(File f : folder) {
+			System.out.println(f);
+		}
 		textures = new SpriteSheet("resources/spritesheet.png", 16);	 	//loads all textures
 		characterSprites = new SpriteSheet("resources/charactersprites.png", 16); //loads character sprites
 		
 		addKeyListener(new KbInput(this));					//loads keyboard input
 		addMouseListener(new MouseInput(this));				//loads mouse input
-		lvlL = new LevelLoader("/resources/level1.txt");				//loads leveldata from textfile
-		lvlC = new LevelCreate(lvlL.getLevelString(), textures);	//create level from leveldata
 		audioHandler = new AudioHandler();					//loads audio
 		audioHandler.playMusic();							//plays bgmusic
-		player = new Player(500, 200, characterSprites, lvlC.getArray(), audioHandler);	//creates player
+		lm = new LevelManager(textures, "/resources/level1.txt"); //loads and creates level from textfile
+		player = new Player(500, 200, characterSprites, lm, audioHandler);	//creates player
+		bgR = new BackgroundRendering();
+		
 	}
 	
 	
@@ -77,7 +90,7 @@ public class Game extends Canvas implements Runnable{
 				frames++;
 			if(System.currentTimeMillis() - timer > 1000) {
 				timer += 1000;
-				System.out.println("FPS: " + frames);;
+				//System.out.println("FPS: " + frames);;
 				frames = 0;
 			}
 		}
@@ -101,8 +114,9 @@ public class Game extends Canvas implements Runnable{
 		//draw background
 		g.setColor(Color.black);
 		g.fillRect(0, 0, FWIDTH*SCALE, FHEIGHT*SCALE);
-		lvlC.render(g);
-		player.render(g);
+		bgR.render(g, player.getX(), player.getY());
+		lm.render(g); //render the level & tileshadow
+		player.render(g); //render the player
 		g.dispose();
 		bs.show();
 	}
@@ -129,6 +143,13 @@ public class Game extends Canvas implements Runnable{
 			break;
 		case 82:
 			player.resetGhost();
+			break;
+		case 33:
+			audioHandler.nextMusic();
+			break;
+		case 34:
+			audioHandler.prevMusic();
+			break;
 		}
 	}
 	
@@ -157,11 +178,13 @@ public class Game extends Canvas implements Runnable{
 	}
 	
 	public void printPlayerInfo() {
-		System.out.println(player.getX());
-		System.out.println(player.getY());
-		System.out.println(player.getGhost().getX());
-		System.out.println(player.getGhost().getY());
-		System.out.println(player.allowJump);
+		System.out.println("Player x = " + player.getX());
+		System.out.println("Player y = " + player.getY());
+		System.out.println("Player xVel = " + player.getXV());
+		System.out.println("Player yVel = " + player.getYV());
+		System.out.println("player y +yV + 64 = " + (player.getY() + player.getYV() + 64));
+		System.out.println("tilesetnumber for tbelow = " + player.xyCoordToTileSet(player.getX(), (int)(player.getY() + player.getYV() + 64)));
+		System.out.println("tilebelow currently at: " + player.tBelow.getY());
 
 	}
 	
