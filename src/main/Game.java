@@ -39,7 +39,7 @@ public class Game extends Canvas implements Runnable{
 	public Game() {
 		File[] folder = new File("src/resources").listFiles();
 		for(File f : folder) {
-			System.out.println(f);
+			//System.out.println(f);
 		}
 		textures = new SpriteSheet("resources/spritesheet.png", 16);	 	//loads all textures
 		characterSprites = new SpriteSheet("resources/charactersprites.png", 16); //loads character sprites
@@ -48,8 +48,9 @@ public class Game extends Canvas implements Runnable{
 		addMouseListener(new MouseInput(this));				//loads mouse input
 		audioHandler = new AudioHandler();					//loads audio
 		audioHandler.playMusic();							//plays bgmusic
-		lm = new LevelManager(textures, "/resources/level1.txt"); //loads and creates level from textfile
-		player = new Player(500, 200, characterSprites, lm, audioHandler);	//creates player
+		lm = new LevelManager(textures); //loads and creates level from textfile
+		lm.initializeLevel(1);
+		player = new Player(characterSprites, lm, audioHandler);	//creates player
 		bgR = new BackgroundRendering();
 		
 	}
@@ -97,6 +98,7 @@ public class Game extends Canvas implements Runnable{
 		stop();
 	}
 	
+		
 	private void tick() {
 		player.tick();
 	}

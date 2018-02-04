@@ -133,9 +133,9 @@ public class GhostPlayer{
 
 	public int checkGhostXBounds(int dir){
 		
-		Tile tUP =   level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 0 ))]; //checks top corner, middle and bottom of player
-		Tile tMID =  level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 32))]; //in given x direction
-		Tile tDOWN = level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 63))];
+		Tile tUP =   level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 0 ))]; //checks top corner, middle and bottom of player
+		Tile tMID =  level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 32))]; //in given x direction
+		Tile tDOWN = level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 63))];
 		
 		if (tUP.isSolid()||tMID.isSolid()||tDOWN.isSolid())	{ //if any 3 tilespaces are solid
 			if(y+63<tDOWN.getY()+2*tDOWN.getHeight()) // if player is above the height of the bottom block, then walk
@@ -146,41 +146,46 @@ public class GhostPlayer{
 		return 1; //if none are solid, allow movement
 	}
 	
-	public int checkGhostYBounds(int dir) {
+public int checkGhostYBounds(int dir) {
 		
-if(dir>=0) { //IF CHAR IS FALLING DOWNWARDS OR STILL
+		if(dir>=0) { //IF CHAR IS FALLING DOWNWARDS OR STILL
 			
+						
 			Class<? extends Tile> tBelowType = gtBelow.getClass();
 			Class<? extends Tile> tBelow2Type = gtBelow2.getClass();
 			
 			if((gtBelow.isSolid()||gtBelow2.isSolid())) { //AND EITHER BLOCK UNDERNEATH IS SOLID	
 				
 				byte solid = (byte)(b2i(gtBelow.isSolid()) + 2*b2i(gtBelow2.isSolid())); //solid = 1 if tbelow solid, 2 if tbelow 2 solid, 3 if both
+				
 						
 				switch(solid) {
 				case 1:
+					if(tBelowType==InteractiveTile.class&&((InteractiveTile)gtBelow).isSwitch()) {
+						activateIntTile((InteractiveTile)gtBelow);  //checks for buttons and switches, activates them
+
+					}
 					if(y+64<gtBelow.getY()+gtBelow.getHeight()*2) {						
 						y = gtBelow.getY()+gtBelow.getHeight()*2 - 64;
-						if(tBelowType==InteractiveTile.class)
-							((InteractiveTile)gtBelow).setState(true);  //checks for buttons and switches, activates them YAWN, 
+						
 					}
 					break;
 				case 2:
+					if(tBelow2Type==InteractiveTile.class&&((InteractiveTile)gtBelow2).isSwitch())
+						activateIntTile((InteractiveTile)gtBelow2); //all this garbage also allows for varying 'heights' of blocks
 					if(y+64<gtBelow2.getY()+gtBelow2.getHeight()*2) {						
 						y = gtBelow2.getY()+gtBelow2.getHeight()*2 - 64;
-						if(tBelow2Type==InteractiveTile.class)
-							((InteractiveTile)gtBelow2).setState(true); //all this garbage also allows for varying 'heights' of blocks
+						
 					}
 					break;
 				case 3:
 					boolean tBelowBigger = gtBelow.getHeight()<=gtBelow2.getHeight();
 					Tile tt = tBelowBigger ? gtBelow:gtBelow2;
+					if(tt.getClass()==InteractiveTile.class&&((InteractiveTile)tt).isSwitch()) //if standing across 2 blocks set floor to higher one
+						activateIntTile((InteractiveTile)tt);
 					if(y+64<tt.getY()+tt.getHeight()*2) {						
 						y = tt.getY()+tt.getHeight()*2 - 64;
-						if(tBelowType==InteractiveTile.class)
-							((InteractiveTile)gtBelow).setState(true);
-						if(tBelow2Type==InteractiveTile.class)
-							((InteractiveTile)gtBelow2).setState(true);
+						
 					}
 				}					
 					return 0;
@@ -224,8 +229,9 @@ if(dir>=0) { //IF CHAR IS FALLING DOWNWARDS OR STILL
 	public void activateIntTile(InteractiveTile it) {
 		it.setState(true);
 		for(InteractiveTile _it : inTileMap.keySet()) {
-			if(_it.getTrID()==it.getTrID())
-				_it.setState(!_it.getState());
+			if(_it.getTrID()==it.getTrID()) {
+				_it.setState(true);
+			}
 		}
 	}
 	

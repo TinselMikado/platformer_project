@@ -7,28 +7,37 @@ public class InteractiveTile extends Tile{
 	private byte triggerID;
 	private boolean isSwitch = false;
 	private byte stateTimer = 60;
+	private boolean isSolidWhileOn;
 	
 	public InteractiveTile(int x, int y, int tileID, byte triggerID, boolean onAtStart) {
 		super(x, y, tileID);
 		this.triggerID = triggerID;
 		naturalState = onAtStart;
+		spriteNumber = state?tileID-1:tileID;
+		switch(tileID) {
+			case 15:
+				isSolidWhileOn = true;
+				break;
+			case 17:
+				isSolidWhileOn = false;
+		}
 	}
 	
 	public void setState(boolean s) {
 		this.state = s;
 		stateTimer = 0;
-		if(isSwitch)
-			alterID(s);
+		setSprite(s);
+		solid=!s||isSolidWhileOn;
 	}	
 	
 	public byte getTimer() {
 		return stateTimer;
 	}
 	
-	public void alterID(boolean s) {
-		LevelManager.update(this, s, x/32+(y/32)*40);		
+	public void setSprite(boolean b) {
+		spriteNumber = b?tileID-1:tileID;
 	}
-	
+		
 	public boolean getState() {
 		return state;
 	}
@@ -53,8 +62,7 @@ public class InteractiveTile extends Tile{
 		if(stateTimer<60)
 			stateTimer++;
 		else if(naturalState!=state) {
-			state = naturalState;
-			alterID(state);
+			setState(naturalState);
 		}
 	}
 	

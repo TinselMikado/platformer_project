@@ -34,23 +34,42 @@ public class Player {
 	private GhostPlayer ghost;
 	private int jumpType = 0;
 	private LevelManager levelManager;
+	private int sTile;
 	
-	public Player(int x, int y, SpriteSheet ss, LevelManager levelManager, AudioHandler ah) {
+	public Player(SpriteSheet ss, LevelManager levelManager, AudioHandler ah) {
 		
-		this.x = x; this.y = y;
 		keyDir = new int[4];
 		this.ss=ss;
-		level = levelManager.getArray();
-		inTileMap = levelManager.getInTileMap();
 		audioHandler = ah;
 		r  = new Random();
+		
+		this.levelManager = levelManager;		
+		level = levelManager.getArray();
+		inTileMap = levelManager.getInTileMap();
+		sTile = levelManager.getSpawnTile();
+		x = 32*(sTile%40); y = 32*(sTile/40);
 		ghost = new GhostPlayer(x, y, levelManager, audioHandler, ss);
-		this.levelManager = levelManager;
+		
 		tAbove = level[0];
 		tBelow = level[0];
 		tAbove2 = level[0];
 		tBelow2 = level[0];
 		
+	}
+	
+	public void newLevel() {
+		
+		levelManager.initializeLevel(levelManager.getLevelNumber()+1);
+		
+		sTile = levelManager.getSpawnTile();
+		System.out.println(sTile);
+		level = levelManager.getArray();
+		inTileMap = levelManager.getInTileMap();
+		x = 32*(sTile%40); y = 32*(sTile/40);
+		xV = 0;
+		yV = 0;
+		
+		resetGhost();
 	}
 	
 	int actionTimer = -1;
@@ -59,7 +78,8 @@ public class Player {
 	
 	public void tick() {
 		
-				
+		//System.out.println(y + " is y");
+		
 		tickTimer++;
 		tickTimer%=120;
 		actionTimer++;
@@ -85,9 +105,7 @@ public class Player {
 		*/
 		
 		
-		attemptedxV = keyDir[0]*-3 + keyDir[2]*3; //attemps moving accoring to key input
-		xV = checkXBounds(getSign(attemptedxV))*attemptedxV; //sets xvelocity to the dir of keys held down, if opposite directions both held down, vel = 0
-		x+=xV; //move player on x by xV
+		
 		
 			
 		/*
@@ -99,13 +117,15 @@ public class Player {
 		
 		falling = i2b(checkYBounds(getSign(yV))); 	//checks whether character on the ground or not, sets falling to true/false
 		
-		if(allowDJump==0)						//DJump is set to zero when on the ground,
-			allowDJump = 1 - keyDir[1]; 		// releasing the jump key while in the air will set it to 1, using the double jump sets allowDJump to -1 until player hits ground again
+			// releasing the jump key while in the air will set it to 1, using the double jump sets allowDJump to -1 until player hits ground again
 		
 		
 		if(falling) {
+				
+			allowJump = 0; 		//dont allow the player to (normal) jump while in the air
 			
-			allowJump = 0; 							//dont allow the player to (normal) jump while in the air
+			if(allowDJump==0)						//DJump is set to zero when on the ground,
+				allowDJump = 1 - keyDir[1]; 
 			
 			if(yV<8)
 				yV+=0.3*checkYBounds(1);					//apply gravity to a max of 8
@@ -129,6 +149,11 @@ public class Player {
 			
 		}
 		
+		
+		
+		attemptedxV = keyDir[0]*-3 + keyDir[2]*3; //attemps moving accoring to key input
+		xV = checkXBounds(getSign(attemptedxV))*attemptedxV; //sets xvelocity to the dir of keys held down, if opposite directions both held down, vel = 0
+		x+=xV; //move player on x by xV
 		y+=yV; //apply Y movement
 		attemptedyV=0; //reset attempted movement
 		
@@ -255,12 +280,16 @@ public class Player {
 		return x/32 + (y/32)*40; //gets i value of whatever tile contains this x&y position
 	}
 	
-		
 	public int checkXBounds(int dir){
 		
-		Tile tUP =   level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 0 ))]; //checks top corner, middle and bottom of player
-		Tile tMID =  level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 32))]; //in given x direction
-		Tile tDOWN = level[xyCoordToTileSet((int)(x+xV+16+18*dir), (int)(y + 63))];
+		Tile tUP =   level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 0 ))]; //checks top corner, middle and bottom of player
+		Tile tMID =  level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 32))]; //in given x direction
+		Tile tDOWN = level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 63))];
+		
+		if(tUP.getID()==11||tMID.getID()==11||tDOWN.getID()==11) {
+			newLevel();
+			return 0;
+		}
 		
 		if (tUP.isSolid()||tMID.isSolid()||tDOWN.isSolid())	{ //if any 3 tilespaces are solid
 			if(y+63<tDOWN.getY()+2*tDOWN.getHeight()) // if player is above the height of the bottom block, then walk
@@ -283,11 +312,13 @@ public class Player {
 			if((tBelow.isSolid()||tBelow2.isSolid())) { //AND EITHER BLOCK UNDERNEATH IS SOLID	
 				
 				byte solid = (byte)(b2i(tBelow.isSolid()) + 2*b2i(tBelow2.isSolid())); //solid = 1 if tbelow solid, 2 if tbelow 2 solid, 3 if both
+				
 						
 				switch(solid) {
 				case 1:
-					if(tBelowType==InteractiveTile.class) {
-						activateIntTile((InteractiveTile)tBelow);  //checks for buttons and switches, activates them YAWN,
+					if(tBelowType==InteractiveTile.class&&((InteractiveTile)tBelow).isSwitch()) {
+						activateIntTile((InteractiveTile)tBelow);  //checks for buttons and switches, activates them
+
 					}
 					if(y+64<tBelow.getY()+tBelow.getHeight()*2) {						
 						y = tBelow.getY()+tBelow.getHeight()*2 - 64;
@@ -295,7 +326,7 @@ public class Player {
 					}
 					break;
 				case 2:
-					if(tBelow2Type==InteractiveTile.class)
+					if(tBelow2Type==InteractiveTile.class&&((InteractiveTile)tBelow2).isSwitch())
 						activateIntTile((InteractiveTile)tBelow2); //all this garbage also allows for varying 'heights' of blocks
 					if(y+64<tBelow2.getY()+tBelow2.getHeight()*2) {						
 						y = tBelow2.getY()+tBelow2.getHeight()*2 - 64;
@@ -305,8 +336,8 @@ public class Player {
 				case 3:
 					boolean tBelowBigger = tBelow.getHeight()<=tBelow2.getHeight();
 					Tile tt = tBelowBigger ? tBelow:tBelow2;
-					if(tt.getClass()==InteractiveTile.class)
-						activateIntTile((InteractiveTile)tBelow);
+					if(tt.getClass()==InteractiveTile.class&&((InteractiveTile)tt).isSwitch()) //if standing across 2 blocks set floor to higher one
+						activateIntTile((InteractiveTile)tt);
 					if(y+64<tt.getY()+tt.getHeight()*2) {						
 						y = tt.getY()+tt.getHeight()*2 - 64;
 						
@@ -321,17 +352,20 @@ public class Player {
 			//falling = true; //KEEP "FALLING" (falling variables just means its applying gravity)
 			if(tAbove.isSolid()||tAbove2.isSolid()) { //IF HE HITS CEILING
 				y = tAbove.getY()+32;
-				return 0;
+				yV = 0;
+				return 1;
 			}
 		}
 		return 1;
 	}
 	
 	public void activateIntTile(InteractiveTile it) {		
+
 		it.setState(true);
 		for(InteractiveTile _it : inTileMap.keySet()) {
-			if(_it.getTrID()==it.getTrID())
-				_it.setState(!_it.getState());
+			if(_it.getTrID()==it.getTrID()) {
+				_it.setState(true);
+			}
 		}
 	}
 	
@@ -384,7 +418,7 @@ public class Player {
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV+33), (int)(y + yV + 32))].getR());							|
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV+33), (int)(y + yV + 63))].getR());			COLLISION  BOUNDS TESTING
 		g2d.draw(tBelow.getR());			
-		g2d.draw(tBelow2.getR());														//						|
+		g2d.draw(tBelow2.getR());							
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV), (int)(y + yV + 64))].getR());			//				|
 		//g2d.draw(level[xyCoordToTileSet((int)(x+xV+30), (int)(y + yV + 64))].getR());		//					|
 		//g2d.drawLine(x, y+48, x+32, y+48);																	|

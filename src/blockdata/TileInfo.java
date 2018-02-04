@@ -10,9 +10,9 @@ public class TileInfo {
 	
 	public static final HashMap<Integer, Boolean> inTileMap;
 	static {
-		inTileMap = new HashMap<Integer, Boolean>();
-		inTileMap.put(14, true);
-		inTileMap.put(15, true);
+		inTileMap = new HashMap<Integer, Boolean>(); // integer = tile id, boolean = Switch or not
+		inTileMap.put(15, true); //button
+		inTileMap.put(17, false); // gate
 		
 		
 		
@@ -30,14 +30,14 @@ public class TileInfo {
 			new TileInfo("StoneBEdge", true, '7'),
 			new TileInfo("StoneREdge", true, '8'),
 			new TileInfo("StoneLEdge", true, '9'),
-			new TileInfo("???", true, 'a'),
-			new TileInfo("???", true, 'b'),
+			new TileInfo("PlayerSpawn", false, '?'), //spawn poiint
+			new TileInfo("Exit", false, '+'), // level exit tiles
 			new TileInfo("???", true, 'c'),
 			new TileInfo("???", true, 'd'),
-			new TileInfo("ButtonOn", true, 'e', 5),
-			new TileInfo("ButtonOff", true, 'f', 5),
-			new TileInfo("Grass", true, 'g'),
-			new TileInfo("Portal", false, 'p')
+			new TileInfo("???", true, 'e'),
+			new TileInfo("Button", true, 'f', 8), //button (default off)
+			new TileInfo("???", true, 'f'),
+			new TileInfo("Gate", true, 'G')	// gates (default closed)
 			};
 	
 	public TileInfo(String s, boolean b, char c, int h) {

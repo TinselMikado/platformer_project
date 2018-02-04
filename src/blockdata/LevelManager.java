@@ -4,6 +4,7 @@ import java.awt.Graphics;
 import java.util.HashMap;
 
 import main.SpriteSheet;
+import main.Tuple;
 
 public class LevelManager {
 	private static Tile[] level;
@@ -11,29 +12,42 @@ public class LevelManager {
 	private SpriteSheet textureSheet;
 	private String levelPath;
 	private TileShadow ts;
+	private int playerSpawn;
+	private int levelNumber;
 	
-	public LevelManager(SpriteSheet ss, String levelPath) {
-		
-		textureSheet = ss;
-		this.levelPath = levelPath;
+	public LevelManager(SpriteSheet ss) {		
+		textureSheet = ss;		
+	}
+	
+	public void initializeLevel(int levelNumber) {
+		this.levelNumber = levelNumber;
+		levelPath = "/resources/level" + Integer.toString(levelNumber) + ".txt";
 		loadLevel();
 		ts = new TileShadow(level);
-		
 	}
 	
 	public Tile[] getArray() {
 		return level;
 	}
 	
-	public void loadLevel() {
-		LevelLoader ll = new LevelLoader(levelPath);
-		createLevel(ll.getLevelString(), textureSheet);
+	public int getLevelNumber() {
+		return levelNumber;
 	}
 	
-	public void createLevel(String ls, SpriteSheet ts) {
-		LevelCreate lc = new LevelCreate(ls, ts);
+	public int getSpawnTile() {
+		return playerSpawn;
+	}
+	
+	public void loadLevel() {
+		LevelLoader ll = new LevelLoader(levelPath);
+		createLevel(ll.getLevelString());
+	}
+	
+	public void createLevel(String ls) {
+		LevelCreate lc = new LevelCreate(ls);
 		level = lc.getArray();
 		inTileMap = lc.getInTileMap();
+		playerSpawn = lc.getPS();
 	}
 	
 	public HashMap<InteractiveTile, Byte> getInTileMap(){
@@ -43,7 +57,7 @@ public class LevelManager {
 	public void render(Graphics g) {
 		for(int i = 0; i < level.length; i++) {
 			Tile t = level[i];
-			g.drawImage(textureSheet.getSprite(t.getID()), t.getX(), t.getY(), 32, 32, null);			
+			g.drawImage(textureSheet.getSprite(t.getSpriteNumber()), t.getX(), t.getY(), 32, 32, null);			
 		}
 		
 		ts.render(g);
@@ -53,7 +67,5 @@ public class LevelManager {
 		return b?1:0;
 	}
 
-	public static void update(InteractiveTile it, boolean state, int pos) {
-		level[pos] = new InteractiveTile(it.x, it.y, it.tileID-b2i(state), it.getTrID(), it.getNatState());
-	}
+
 }

@@ -2,20 +2,19 @@ package blockdata;
 
 import java.util.HashMap;
 
-import main.SpriteSheet;
-
 public class LevelCreate {
 	
-	private SpriteSheet ss;
 	private Tile[] level;
 	private HashMap<InteractiveTile, Byte> iTMap; //stores an interactive tile and its trigger id
 	private byte trgID;
+	private int playerSpawnTile; // returns TILE NUMBER of player spawn
 	
-	public LevelCreate(String levelStr, SpriteSheet sprsht) {
+	public LevelCreate(String levelStr) {
 		level = new Tile[levelStr.length()];
-		ss = sprsht;
 		trgID = 0;
 		iTMap = new HashMap<InteractiveTile, Byte>();
+		playerSpawnTile = levelStr.indexOf('?');
+		
 		
 		for(int i = 0; i<levelStr.length(); i++) {
 			if(!TileInfo.inTileMap.containsKey(findIDfromChar(levelStr.charAt(i)))) {
@@ -34,6 +33,10 @@ public class LevelCreate {
 	
 	public Tile[] getArray() {
 		return level;
+	}
+	
+	public int getPS() {
+		return playerSpawnTile;
 	}
 	
 	public HashMap<InteractiveTile, Byte> getInTileMap(){

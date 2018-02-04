@@ -11,6 +11,7 @@ public class Tile {
 	protected String name;
 	protected char inputChar;
 	protected int height;
+	protected int spriteNumber;
 	
 	
 	public Tile(int x, int y, int tileID) {
@@ -22,10 +23,15 @@ public class Tile {
 		inputChar = TileInfo.tileMap[tileID].inputChar;
 		name = TileInfo.tileMap[tileID].tileName;
 		r = new Rectangle(x, y, 32, 32);
+		spriteNumber  = tileID;
 	}
 	
 	public boolean isSolid() {
 		return solid;
+	}
+	
+	public int getSpriteNumber() {
+		return spriteNumber;
 	}
 	
 	public int getHeight() {
