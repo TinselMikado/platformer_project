@@ -95,6 +95,7 @@ public class Player {
 				
 		tAbove  = level[xyCoordToTileSet(x, (int)(y + yV - 1))];
 		tBelow  = level[xyCoordToTileSet(x, (int)(y + yV + 64))];
+		System.out.println(x);
 		tAbove2 = level[xyCoordToTileSet(x + 31, (int)(y + yV - 1))];
 		tBelow2 = level[xyCoordToTileSet(x + 31, (int)(y + yV + 64))];
 				
@@ -277,14 +278,29 @@ public class Player {
 	}
 	
 	public int xyCoordToTileSet(int x, int y) {
-		return x/32 + (y/32)*40; //gets i value of whatever tile contains this x&y position
+		int xx = x; int yy = y;		
+		if(x<0)
+			xx = 0;
+		else if(x>1279)
+			xx = 1279;
+		
+		if(y<0)
+			yy = 0;
+		else if(y>959)
+			yy = 959;
+		
+		return xx/32 + (yy/32)*40; //gets i value of whatever tile contains this x&y position
 	}
 	
 	public int checkXBounds(int dir){
 		
-		Tile tUP =   level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 0 ))]; //checks top corner, middle and bottom of player
-		Tile tMID =  level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 32))]; //in given x direction
-		Tile tDOWN = level[xyCoordToTileSet((int)(x+xV+16+19*dir), (int)(y + 63))];
+		if(x+16+16*dir>1280||x+16+16*dir<0) {
+			return 0;
+		}
+		
+		Tile tUP =   level[xyCoordToTileSet((int)(x+16+20*dir), (int)(y + 0 ))]; //checks top corner, middle and bottom of player
+		Tile tMID =  level[xyCoordToTileSet((int)(x+16+20*dir), (int)(y + 32))]; //in given x direction
+		Tile tDOWN = level[xyCoordToTileSet((int)(x+16+20*dir), (int)(y + 63))];
 		
 		if(tUP.getID()==11||tMID.getID()==11||tDOWN.getID()==11) {
 			newLevel();
