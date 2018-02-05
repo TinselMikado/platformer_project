@@ -8,12 +8,19 @@ import java.io.InputStreamReader;
 
 public class LevelLoader {
 	private String lvlStr = "";
+	private String itStr = "";
 	
 	public LevelLoader(String path){
 		
 		
+		String str = path;
+		str = new StringBuilder(str).insert(str.length()-4, "it").toString();
+		System.out.println(str);
+		itStr = iMapLoad(str);
+		
 		InputStream in = getClass().getResourceAsStream(path);
 		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		
 		
 		String l;
 		try {
@@ -42,6 +49,21 @@ public class LevelLoader {
 
 	}
 	
+	public String iMapLoad(String path) {
+		
+		InputStream in = getClass().getResourceAsStream(path);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		
+		String s = "";
+		try {
+			s = reader.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return s;
+	}
+	
 	public String loadChunk(String input) {
 		String[] s = input.split(",");
 		String out = "";		
@@ -51,6 +73,10 @@ public class LevelLoader {
 		}
 		
 		return out;
+	}
+	
+	public String getIString() {
+		return itStr;
 	}
 	
 	public String getLevelString() {

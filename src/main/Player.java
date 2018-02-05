@@ -25,7 +25,7 @@ public class Player {
 	public int allowJump = 1;
 	private int allowDJump = 0;
 	private Tile[] level;
-	private HashMap<InteractiveTile, Byte> inTileMap;
+	private HashMap<InteractiveTile, Integer> inTileMap;
 	public Tile tAbove, tBelow, tAbove2, tBelow2;
 	private int headTile = 8;
 	private int prevAct = 0;
@@ -95,7 +95,6 @@ public class Player {
 				
 		tAbove  = level[xyCoordToTileSet(x, (int)(y + yV - 1))];
 		tBelow  = level[xyCoordToTileSet(x, (int)(y + yV + 64))];
-		System.out.println(x);
 		tAbove2 = level[xyCoordToTileSet(x + 31, (int)(y + yV - 1))];
 		tBelow2 = level[xyCoordToTileSet(x + 31, (int)(y + yV + 64))];
 				

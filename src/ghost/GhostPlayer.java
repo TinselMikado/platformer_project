@@ -29,7 +29,7 @@ public class GhostPlayer{
 	private Random r;
 	private int action;
 	private int prevAction;
-	private HashMap<InteractiveTile, Byte> inTileMap;
+	private HashMap<InteractiveTile, Integer> inTileMap;
 	
 
 	public GhostPlayer(int x, int y, LevelManager levelManager, AudioHandler ah, SpriteSheet ss) {

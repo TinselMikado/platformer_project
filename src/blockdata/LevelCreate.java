@@ -5,15 +5,14 @@ import java.util.HashMap;
 public class LevelCreate {
 	
 	private Tile[] level;
-	private HashMap<InteractiveTile, Byte> iTMap; //stores an interactive tile and its trigger id
-	private byte trgID;
+	private HashMap<InteractiveTile, Integer> iTMap; //stores an interactive tile and its trigger id
 	private int playerSpawnTile; // returns TILE NUMBER of player spawn
 	
-	public LevelCreate(String levelStr) {
+	public LevelCreate(String levelStr, String itStr) {
 		level = new Tile[levelStr.length()];
-		trgID = 0;
-		iTMap = new HashMap<InteractiveTile, Byte>();
+		iTMap = new HashMap<InteractiveTile, Integer>();
 		playerSpawnTile = levelStr.indexOf('?');
+		int itStrchar = 0;
 		
 		
 		for(int i = 0; i<levelStr.length(); i++) {
@@ -22,13 +21,14 @@ public class LevelCreate {
 				level[i] = t; //creates array of tiles using the string of id numbers from LevelLoader
 			}
 			else {
-				InteractiveTile t = new InteractiveTile((i%40)*32, (i/40)*32, findIDfromChar(levelStr.charAt(i)), trgID, false);
+				InteractiveTile t = new InteractiveTile((i%40)*32, (i/40)*32, findIDfromChar(levelStr.charAt(i)), Character.getNumericValue(itStr.charAt(itStrchar)), false);
+				itStrchar++;
 				t.setSwitch(TileInfo.inTileMap.get(t.getID()));
 				level[i] = t;
-				//trgID++;
 				iTMap.put(t, t.getTrID());
 			}
 		}
+		System.out.println(itStrchar);
 	}
 	
 	public Tile[] getArray() {
@@ -39,7 +39,7 @@ public class LevelCreate {
 		return playerSpawnTile;
 	}
 	
-	public HashMap<InteractiveTile, Byte> getInTileMap(){
+	public HashMap<InteractiveTile, Integer> getInTileMap(){
 		return iTMap;
 	}
 	

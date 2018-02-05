@@ -4,12 +4,12 @@ public class InteractiveTile extends Tile{
 
 	private boolean state = false;
 	private boolean naturalState;
-	private byte triggerID;
+	private int triggerID;
 	private boolean isSwitch = false;
 	private byte stateTimer = 60;
 	private boolean isSolidWhileOn;
 	
-	public InteractiveTile(int x, int y, int tileID, byte triggerID, boolean onAtStart) {
+	public InteractiveTile(int x, int y, int tileID, int triggerID, boolean onAtStart) {
 		super(x, y, tileID);
 		this.triggerID = triggerID;
 		naturalState = onAtStart;
@@ -54,7 +54,7 @@ public class InteractiveTile extends Tile{
 		return isSwitch;
 	}
 	
-	public byte getTrID() {
+	public int getTrID() {
 		return triggerID;
 	}
 	

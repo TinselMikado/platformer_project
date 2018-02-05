@@ -8,7 +8,7 @@ import main.Tuple;
 
 public class LevelManager {
 	private static Tile[] level;
-	private HashMap<InteractiveTile, Byte> inTileMap;
+	private HashMap<InteractiveTile, Integer> inTileMap;
 	private SpriteSheet textureSheet;
 	private String levelPath;
 	private TileShadow ts;
@@ -40,17 +40,17 @@ public class LevelManager {
 	
 	public void loadLevel() {
 		LevelLoader ll = new LevelLoader(levelPath);
-		createLevel(ll.getLevelString());
+		createLevel(ll.getLevelString(), ll.getIString());
 	}
 	
-	public void createLevel(String ls) {
-		LevelCreate lc = new LevelCreate(ls);
+	public void createLevel(String ls, String is) {
+		LevelCreate lc = new LevelCreate(ls, is);
 		level = lc.getArray();
 		inTileMap = lc.getInTileMap();
 		playerSpawn = lc.getPS();
 	}
 	
-	public HashMap<InteractiveTile, Byte> getInTileMap(){
+	public HashMap<InteractiveTile, Integer> getInTileMap(){
 		return inTileMap;
 	}
 	
